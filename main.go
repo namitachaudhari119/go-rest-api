@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -62,6 +61,7 @@ func getStudent(w http.ResponseWriter, r *http.Request) {
 }
 
 func createStudent(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	stmt, err := db.Prepare("INSERT INTO student(id, name, standard) VALUES(?,?,?);")
 	if err != nil {
 		panic(err.Error())
@@ -83,10 +83,11 @@ func createStudent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Fprintf(w, "New student was created")
+	json.NewEncoder(w).Encode(keyVal)
 }
 
 func updateStudent(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	stmt, err := db.Prepare("UPDATE student SET name = ?, standard = ? WHERE id = ?;")
 	if err != nil {
@@ -104,7 +105,7 @@ func updateStudent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Fprintf(w, "Student with ID = %s was updated", params["id"])
+	json.NewEncoder(w).Encode(keyVal)
 }
 
 func deleteStudent(w http.ResponseWriter, r *http.Request) {
@@ -117,11 +118,13 @@ func deleteStudent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Fprintf(w, "Student with ID = %s was deleted", params["id"])
+
+	keyVal := make(map[string]string)
+	keyVal["message"] = "Student with ID = " + params["id"] + " was deleted"
+	json.NewEncoder(w).Encode(keyVal)
 }
 
 func main() {
-
 	db, err = sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/students")
 	if err != nil {
 		panic(err.Error())
