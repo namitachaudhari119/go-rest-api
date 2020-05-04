@@ -3,11 +3,13 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/tkanos/gonfig"
 )
 
 var db *sql.DB
@@ -17,6 +19,15 @@ type Student struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Standard string `json:"standard"`
+}
+
+type Configuration struct {
+	DBEngine   string `json:"db_engine"`
+	DBServer   string `json:"db_server"`
+	DBUser     string `json:"db_user"`
+	DBPassword string `json:"db_password"`
+	Host       string `json:"host"`
+	Port       string `json:"port"`
 }
 
 func getStudents(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +136,15 @@ func deleteStudent(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	db, err = sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/students")
+
+	configuration := Configuration{}
+	err := gonfig.GetConf("config.json", &configuration)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	dbConnection := fmt.Sprintf("%s:%s@tcp(%s)/students", configuration.DBUser, configuration.DBPassword, configuration.DBServer)
+	db, err = sql.Open(configuration.DBEngine, dbConnection)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -141,5 +160,5 @@ func main() {
 	router.HandleFunc("/students/{id}", getStudent).Methods("GET")
 	router.HandleFunc("/students/{id}", updateStudent).Methods("PUT")
 	router.HandleFunc("/students/{id}", deleteStudent).Methods("DELETE")
-	http.ListenAndServe(":8000", router)
+	http.ListenAndServe(fmt.Sprintf("%s:%s", configuration.Host, configuration.Port), router)
 }
